@@ -22,10 +22,10 @@ jobs:
             platform: darwin
             arch: universal
             output: LikhiLakeerain.app
-          - os: ubuntu-latest
-            platform: linux
-            arch: amd64
-            output: LikhiLakeerain
+          # - os: ubuntu-latest
+          #   platform: linux
+          #   arch: amd64
+          #   output: LikhiLakeerain
 
     runs-on: ${{ matrix.os }}
 
@@ -53,10 +53,10 @@ jobs:
           cd frontend
           npm ci
 
-      - name: Build (Linux)
-        if: matrix.platform == 'linux'
-        run: |
-          wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -clean
+      # - name: Build (Linux)
+      #   if: matrix.platform == 'linux'
+      #   run: |
+      #     wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -clean
 
       - name: Build (Windows)
         if: matrix.platform == 'windows'
@@ -80,11 +80,11 @@ jobs:
           cd build/bin
           zip -r ../../../LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
 
-      - name: Create archive (Linux)
-        if: matrix.platform == 'linux'
-        run: |
-          cd build/bin
-          zip -r ../../../LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
+      # - name: Create archive (Linux)
+      #   if: matrix.platform == 'linux'
+      #   run: |
+      #     cd build/bin
+      #     zip -r ../../../LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
