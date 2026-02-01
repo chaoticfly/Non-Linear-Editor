@@ -71,14 +71,14 @@ jobs:
 
       - name: Create archive (Windows)
         if: matrix.platform == 'windows'
-        run: Compress-Archive -Path build/bin/${{ matrix.output }} -DestinationPath LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip
+        run: Compress-Archive -Path build/bin/${{ matrix.output }} -DestinationPath likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip
         shell: pwsh
 
       - name: Create archive (macOS)
         if: matrix.platform == 'darwin'
         run: |
           cd build/bin
-          zip -r ../../../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
+          zip -r ../../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
 
       # - name: Create archive (Linux)
       #   if: matrix.platform == 'linux'
