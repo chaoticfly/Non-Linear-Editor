@@ -78,7 +78,7 @@ jobs:
         if: matrix.platform == 'darwin'
         run: |
           cd build/bin
-          zip -r ../../../LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
+          zip -r ../../../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
 
       # - name: Create archive (Linux)
       #   if: matrix.platform == 'linux'
@@ -89,8 +89,8 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}
-          path: LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.*
+          name: likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}
+          path: likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.*
 
   release:
     needs: build
