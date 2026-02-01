@@ -81,8 +81,7 @@ jobs:
         if: matrix.platform == 'darwin'
         run: |
           cd build/bin
-          zip -r ../../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
-
+          zip -r ../../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip likhi-lakeerain.app
       # - name: Create archive (Linux)
       #   if: matrix.platform == 'linux'
       #   run: |
