@@ -22,14 +22,6 @@ jobs:
             platform: darwin
             arch: universal
             output: LikhiLakeerain.app
-          - os: macos-latest
-            platform: darwin
-            arch: amd64
-            output: LikhiLakeerain-amd64.app
-          - os: macos-latest
-            platform: darwin
-            arch: arm64
-            output: LikhiLakeerain-arm64.app
           - os: ubuntu-latest
             platform: linux
             arch: amd64
