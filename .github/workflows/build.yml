@@ -69,6 +69,9 @@ jobs:
         run: |
           wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -clean
 
+      - name: List build output
+        run: ls -laR build/bin/
+
       - name: Create archive (Windows)
         if: matrix.platform == 'windows'
         run: Compress-Archive -Path build/bin/${{ matrix.output }} -DestinationPath likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip
