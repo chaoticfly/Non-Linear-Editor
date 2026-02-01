@@ -1,0 +1,236 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #0f172a;
+  color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Quill editor custom styles */
+.marker-editor-quill {
+  background: white;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.marker-editor-quill .ql-toolbar {
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 0.5rem 0.5rem 0 0;
+  flex-shrink: 0;
+}
+
+.marker-editor-quill .ql-container {
+  border: none;
+  font-size: 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.marker-editor-quill .ql-editor {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  color: #1e293b;
+  min-height: 300px;
+}
+
+.marker-editor-quill .ql-editor p,
+.marker-editor-quill .ql-editor h1,
+.marker-editor-quill .ql-editor h2,
+.marker-editor-quill .ql-editor h3,
+.marker-editor-quill .ql-editor li,
+.marker-editor-quill .ql-editor span {
+  color: #1e293b;
+}
+
+.marker-editor-quill .ql-editor.ql-blank::before {
+  color: #94a3b8;
+  font-style: normal;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Range input styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  margin-top: -6px;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  background: #334155;
+  border-radius: 2px;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #475569;
+  border-radius: 4px;
+  background: #1e293b;
+  cursor: pointer;
+  position: relative;
+}
+
+input[type="checkbox"]:checked {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Line clamp utility */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Focus visible styles */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: #3b82f6;
+  color: white;
+}
+
+/* Distraction-free editor styles */
+.distraction-free-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.distraction-free-container {
+  width: 100%;
+  max-width: 720px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 60px 40px;
+}
+
+.distraction-free-hint {
+  text-align: center;
+  color: #4a4a4a;
+  font-size: 13px;
+  margin-bottom: 40px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.distraction-free-hint:hover {
+  opacity: 1;
+}
+
+.distraction-free-hint kbd {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.distraction-free-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: #e0e0e0;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 22px;
+  line-height: 1.8;
+  letter-spacing: 0.01em;
+  caret-color: #3b82f6;
+}
+
+.distraction-free-textarea::placeholder {
+  color: #3a3a3a;
+}
+
+.distraction-free-textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.distraction-free-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.distraction-free-textarea::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 3px;
+}
+
+.distraction-free-textarea::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}

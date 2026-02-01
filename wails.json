@@ -1,0 +1,27 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "likhi-lakeerain",
+  "outputfilename": "LikhiLakeerain",
+  "frontend:install": "npm --version",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Developer",
+    "email": ""
+  },
+  "info": {
+    "companyName": "",
+    "productName": "Likhi Lakeerain",
+    "productVersion": "1.0.0",
+    "copyright": "",
+    "comments": "लिखी लकीरें - Written Lines: A timeline-based marker editor"
+  },
+  "build": {
+    "windows": {
+      "platform": "windows",
+      "arch": "amd64"
+    }
+  },
+  "frontend:dir": "frontend"
+}
