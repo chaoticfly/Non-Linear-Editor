@@ -21,19 +21,11 @@ jobs:
           - os: macos-latest
             platform: darwin
             arch: universal
-            output: LikhiLakeerain.app
-          - os: macos-latest
-            platform: darwin
-            arch: amd64
-            output: LikhiLakeerain-amd64.app
-          - os: macos-latest
-            platform: darwin
-            arch: arm64
-            output: LikhiLakeerain-arm64.app
-          - os: ubuntu-latest
-            platform: linux
-            arch: amd64
-            output: LikhiLakeerain
+            output: likhi-lakeerain.app
+          # - os: ubuntu-latest
+          #   platform: linux
+          #   arch: amd64
+          #   output: LikhiLakeerain
 
     runs-on: ${{ matrix.os }}
 
@@ -61,10 +53,10 @@ jobs:
           cd frontend
           npm ci
 
-      - name: Build (Linux)
-        if: matrix.platform == 'linux'
-        run: |
-          wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -clean
+      # - name: Build (Linux)
+      #   if: matrix.platform == 'linux'
+      #   run: |
+      #     wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -clean
 
       - name: Build (Windows)
         if: matrix.platform == 'windows'
@@ -77,28 +69,37 @@ jobs:
         run: |
           wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -clean
 
+      - name: List build output (macOS)
+        if: matrix.platform == 'darwin'
+        run: ls -laR build/bin/
+
+      - name: List build output (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: Get-ChildItem -Recurse build/bin/
+
       - name: Create archive (Windows)
         if: matrix.platform == 'windows'
-        run: Compress-Archive -Path build/bin/${{ matrix.output }} -DestinationPath LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip
+        run: Compress-Archive -Path build/bin/${{ matrix.output }} -DestinationPath likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip
         shell: pwsh
 
       - name: Create archive (macOS)
         if: matrix.platform == 'darwin'
         run: |
           cd build/bin
-          zip -r ../../../LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
+          zip -r ../../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
 
-      - name: Create archive (Linux)
-        if: matrix.platform == 'linux'
-        run: |
-          cd build/bin
-          zip -r ../../../LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
+      # - name: Create archive (Linux)
+      #   if: matrix.platform == 'linux'
+      #   run: |
+      #     cd build/bin
+      #     zip -r ../../../LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}
-          path: LikhiLakeerain-${{ matrix.platform }}-${{ matrix.arch }}.*
+          name: likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}
+          path: likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.*
 
   release:
     needs: build
