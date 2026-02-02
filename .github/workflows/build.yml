@@ -69,8 +69,14 @@ jobs:
         run: |
           wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -clean
 
-      - name: List build output
+      - name: List build output (macOS)
+        if: matrix.platform == 'darwin'
         run: ls -laR build/bin/
+
+      - name: List build output (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: Get-ChildItem -Recurse build/bin/
 
       - name: Create archive (Windows)
         if: matrix.platform == 'windows'
@@ -81,7 +87,8 @@ jobs:
         if: matrix.platform == 'darwin'
         run: |
           cd build/bin
-          zip -r ../../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip likhi-lakeerain.app
+          zip -r ../../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
+
       # - name: Create archive (Linux)
       #   if: matrix.platform == 'linux'
       #   run: |
