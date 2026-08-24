@@ -18,23 +18,7 @@ By participating in this project, you are expected to uphold our Code of Conduct
 
 ## Development Setup
 
-### Prerequisites
-
-- Node.js (version 16 or higher)
-- npm or yarn
-
-### Installation
-
-```bash
-cd frontend
-npm install
-```
-
-### Running Development Server
-
-```bash
-npm run dev
-```
+See [DEVELOPER.md](DEVELOPER.md) for prerequisites, installation, and how to run the app in development mode.
 
 ## Code Standards
 

@@ -1,103 +1,85 @@
-# Likhi Lakeerain - Non-Linear Editor
+<p align="center">
+  <img src="icon-written-words.png" alt="Likhi Lakeerain icon" width="96" />
+</p>
 
-A visual non-linear editor for organizing thoughts, ideas, and content using a grid-based timeline system.
+<h1 align="center">Likhi Lakeerain</h1>
 
-## Overview
+<p align="center"><em>Written Lines</em> — a non-linear editor for organizing thoughts, scenes, and ideas on a grid instead of a single line.</p>
 
-Likhi Lakeerain (which translates to "Written Lines" in Urdu) is a unique non-linear editor that allows users to create and organize content using a grid of horizontal and vertical timelines. Unlike traditional linear editors, this tool enables users to place markers anywhere on intersecting lines, making it ideal for mind mapping, storyboarding, project planning, and other non-linear content creation tasks.
+<p align="center">
+  <img src="docs/screenshots/populated-grid.png" alt="Likhi Lakeerain grid with several markers placed" width="800" />
+</p>
 
-## Features
+## What is this?
 
-- **Grid-based Timeline System**: Create customizable grids with horizontal and vertical lines
-- **Interactive Canvas**: Click anywhere on a line to place markers
-- **Rich Text Editing**: Edit marker content with a rich text editor
-- **Visual Organization**: Color-code markers and organize them into categories
-- **Tagging System**: Tag markers for easy filtering and organization
-- **Compile Mode**: Arrange markers in a specific order for final output
-- **Project Management**: Save and load projects
-- **Responsive Design**: Adapts to different screen sizes
+Most editors force you to write top to bottom, start to finish. Likhi Lakeerain instead gives you a grid of horizontal and vertical lines and lets you drop **markers** — small notes with a title, rich text content, color, category, and tags — anywhere along those lines.
 
-## Architecture
+It's built for anything that isn't naturally linear: story outlines and branching narratives, mind maps, research notes, project plans, or any collection of ideas you want to see laid out spatially before you commit to an order.
 
-The application is built with a modern React/TypeScript frontend using:
+Likhi Lakeerain is a free, open-source desktop app for Windows and macOS. Your projects are saved as files on your own machine — nothing is sent to a server.
 
-- **React** with hooks for UI components
-- **Canvas API** for high-performance rendering of the grid and markers
-- **Context API** for state management
-- **Tailwind CSS** for styling
-- **Vite** for fast development and building
+## Download
 
-### Core Components
+Grab the latest build for your platform from the [Releases page](../../releases):
 
-1. **TimelineCanvas**: The main canvas component that renders the grid and handles user interactions
-2. **EditorContext**: Central state management for the entire application
-3. **Marker System**: Interactive elements placed on the grid lines
-4. **Compile Drawer**: Interface for organizing markers in a specific order
+- **Windows** — download and run `likhi-lakeerain-windows-amd64.zip`, then launch `LikhiLakeerain.exe`
+- **macOS** — download `likhi-lakeerain-darwin-universal.zip`, unzip, and drag `LikhiLakeerain.app` to Applications
 
-### Data Model
+> Want to build it yourself instead, or contribute code? See [DEVELOPER.md](DEVELOPER.md).
 
-- **Markers**: Content elements placed on grid lines with rich text, tags, and metadata
-- **Timelines**: Horizontal and vertical lines that form the grid structure
-- **Projects**: Collections of markers, configuration, and compile slots
+## Getting started
 
-## Getting Started
+### 1. The grid
 
-### Prerequisites
+When you open a new project you'll see a grid of horizontal lines (`H1`, `H2`, ...) and vertical lines (`V1`, `V2`, ...). Think of the vertical lines as parallel threads — characters, storylines, workstreams, whatever you're tracking — and the horizontal lines as stages those threads pass through.
 
-- Node.js (version 16 or higher)
-- npm or yarn
+<p align="center">
+  <img src="docs/screenshots/grid-overview.png" alt="Empty timeline grid" width="800" />
+</p>
 
-### Installation
+### 2. Add a marker
 
-```bash
-cd frontend
-npm install
-```
+Click anywhere on a line to drop a marker there. A quick-add box pops up right on the canvas — type a thought and hit **Enter** to save it immediately, or **Shift+Enter** to jump into the full editor.
 
-### Development
+<p align="center">
+  <img src="docs/screenshots/quick-add.png" alt="Quick-add popup for a new marker" width="800" />
+</p>
 
-```bash
-npm run dev
-```
+### 3. Edit a marker
 
-### Building for Production
+Click any existing marker to open the full editor: a title, a rich text body (formatting, lists, links), and a **Label, category & tags** section for organizing it. Markers save automatically as you type.
 
-```bash
-npm run build
-```
+<p align="center">
+  <img src="docs/screenshots/marker-editor.png" alt="Full marker editor with rich text content" width="800" />
+</p>
 
-## Usage
+### 4. Shape the grid to fit your project
 
-1. **Create a Grid**: Configure the number of horizontal and vertical lines in the settings
-2. **Add Markers**: Click on any line to place a marker
-3. **Edit Content**: Click on a marker to open the editor and add content
-4. **Organize**: Use tags, colors, and categories to organize your markers
-5. **Compile**: Use the compile drawer to arrange markers in a specific order for output
+Open **Settings** (the gear icon) to change the number of horizontal and vertical lines, toggle either axis on or off, adjust how close you need to click to a line for it to register, and pick a background theme — several dark and light presets, or a custom color.
 
-## Project Structure
+<p align="center">
+  <img src="docs/screenshots/settings-panel.png" alt="Settings panel showing timeline and appearance options" width="800" />
+</p>
 
-```
-frontend/
-├── src/
-│   ├── components/
-│   │   ├── Canvas/       # Canvas rendering and interaction
-│   │   ├── Compile/      # Compile drawer components
-│   │   ├── Layout/       # Header, sidebar layout components
-│   │   ├── Marker/       # Marker editing components
-│   │   └── Settings/     # Configuration components
-│   ├── context/          # React context for state management
-│   ├── hooks/            # Custom React hooks
-│   ├── types/            # TypeScript type definitions
-│   ├── utils/            # Utility functions
-│   └── services/         # External service integrations
-├── public/               # Static assets
-└── ...
-```
+### 5. Organize and compile
 
-## Contributing
+Use **tags** and **categories** to group related markers, and colors to tell them apart visually at a glance. When you're ready to turn your scattered markers into an ordered piece of writing, use **Compile** to arrange selected markers into a sequence — the order you'll actually use for the final output.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### 6. Save your work
+
+Use **File → Save** (or **Save As**) to write your project to a `.json` file on disk, and **File → Open** to load one back up. Projects are just files — back them up, move them between machines, or put them under version control however you like.
+
+## Tips
+
+- **ESC** closes the marker editor without losing your changes (they're already saved).
+- **Shift+Enter** in the quick-add box jumps straight to the full editor.
+- Keep titles short — they're what you scan across the grid before opening a marker.
+- Apply categories and tags as you go rather than after the fact; it's much less work than sorting everything at the end.
+
+## Feedback and support
+
+Found a bug or have an idea? Please [open an issue](../../issues) — bug reports, feature requests, and general feedback are all welcome.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Likhi Lakeerain is licensed under the MIT License — see [LICENSE](LICENSE) for details.
