@@ -1,46 +1,43 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.bubble.css';
 
 interface DistractionFreeEditorProps {
   isOpen: boolean;
   content: string;
   backgroundColor: string;
-  onClose: (content: string) => void;
+  onChange: (content: string) => void;
+  onClose: () => void;
 }
 
-// Convert HTML to plain text for editing
-function htmlToPlainText(html: string): string {
-  const temp = document.createElement('div');
-  temp.innerHTML = html;
-  return temp.textContent || temp.innerText || '';
-}
-
-// Convert plain text back to basic HTML paragraphs
-function plainTextToHtml(text: string): string {
-  return text
-    .split('\n')
-    .map((line) => (line.trim() ? `<p>${line}</p>` : '<p><br></p>'))
-    .join('');
-}
+// Bubble theme keeps the toolbar hidden until text is selected, which is
+// what makes this feel distraction-free rather than just "modal, but bigger".
+const BUBBLE_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['link'],
+  ],
+};
 
 export default function DistractionFreeEditor({
   isOpen,
   content,
   backgroundColor,
+  onChange,
   onClose,
 }: DistractionFreeEditorProps) {
-  const [text, setText] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const quillRef = useRef<ReactQuill>(null);
 
-  // Initialize text from HTML content when opening
   useEffect(() => {
     if (isOpen) {
-      setText(htmlToPlainText(content));
-      // Focus textarea after a short delay to ensure it's rendered
-      setTimeout(() => {
-        textareaRef.current?.focus();
+      const focusTimer = setTimeout(() => {
+        quillRef.current?.getEditor()?.focus();
       }, 50);
+      return () => clearTimeout(focusTimer);
     }
-  }, [isOpen, content]);
+  }, [isOpen]);
 
   // Handle ESC key to close
   useEffect(() => {
@@ -50,13 +47,13 @@ export default function DistractionFreeEditor({
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        onClose(plainTextToHtml(text));
+        onClose();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, text, onClose]);
+  }, [isOpen, onClose]);
 
   // Prevent body scroll when open
   useEffect(() => {
@@ -70,21 +67,24 @@ export default function DistractionFreeEditor({
     };
   }, [isOpen]);
 
+  const quillModules = useMemo(() => BUBBLE_MODULES, []);
+
   if (!isOpen) return null;
 
   return (
     <div className="distraction-free-overlay" style={{ backgroundColor }}>
       <div className="distraction-free-container">
         <div className="distraction-free-hint">
-          Press <kbd>Esc</kbd> to exit
+          Select text to format &middot; Press <kbd>Esc</kbd> to exit
         </div>
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+        <ReactQuill
+          ref={quillRef}
+          theme="bubble"
+          value={content}
+          onChange={onChange}
+          modules={quillModules}
           placeholder="Start writing..."
-          className="distraction-free-textarea"
-          spellCheck
+          className="distraction-free-quill"
         />
       </div>
     </div>

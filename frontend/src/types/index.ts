@@ -1,12 +1,15 @@
 export interface Marker {
   id: string;
   lineId: string;
+  crossLineId?: string; // Perpendicular line id when placed at a grid intersection
   position: number; // 0-1 normalized position on line
   label: string;
   content: string; // Rich text HTML content
   tags: string[];
   category: string;
   color: string;
+  linkedMarkerIds?: string[];
+  writingStatus?: 'draft' | 'complete';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,8 +20,21 @@ export interface Project {
   config: EditorConfig;
   markers: Marker[];
   compileSlots: string[];
+  narrativePaths?: NarrativePath[];
+  activeNarrativePathId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NarrativePath {
+  id: string;
+  name: string;
+  markerIds: string[];
+}
+
+export interface AutosaveEnvelope {
+  project: Project;
+  savedAt: string;
 }
 
 export interface CompiledSection {
@@ -62,6 +78,7 @@ export interface LineGeometry {
 export interface HitTestResult {
   hit: boolean;
   lineId: string | null;
+  crossLineId: string | null; // Perpendicular line id when the hit is a grid intersection
   position: number; // 0-1 normalized
   snapPoint: Point | null;
 }
@@ -83,26 +100,40 @@ export const DEFAULT_MARKER_COLORS = [
   '#6b7280', // gray
 ];
 
+export interface BackgroundColorPreset {
+  name: string;
+  color: string;
+}
+
+// Low-chroma backgrounds keep long writing sessions comfortable while still
+// giving each project a distinct atmosphere.
+export const BACKGROUND_COLOR_PALETTES: Record<'dark' | 'light', BackgroundColorPreset[]> = {
+  dark: [
+    { name: 'Midnight Ink', color: '#0b0f14' },
+    { name: 'Blue Hour', color: '#111827' },
+    { name: 'Deep Fjord', color: '#10212b' },
+    { name: 'Forest Night', color: '#11231c' },
+    { name: 'Aubergine', color: '#211725' },
+    { name: 'Cocoa', color: '#241b18' },
+    { name: 'Graphite', color: '#202124' },
+    { name: 'Storm', color: '#252936' },
+  ],
+  light: [
+    { name: 'Porcelain', color: '#f7f7f5' },
+    { name: 'Warm Paper', color: '#f4efe6' },
+    { name: 'Oat Milk', color: '#eee8dc' },
+    { name: 'Mist', color: '#e8eef2' },
+    { name: 'Sage Wash', color: '#e5eee7' },
+    { name: 'Sea Glass', color: '#e2efed' },
+    { name: 'Lavender Haze', color: '#ece8f2' },
+    { name: 'Blush', color: '#f3e7e5' },
+  ],
+};
+
 export const DEFAULT_BACKGROUND_COLORS = [
-  // Dark themes
-  '#0f172a', // slate-900 (default)
-  '#1e293b', // slate-800
-  '#18181b', // zinc-900
-  '#171717', // neutral-900
-  '#1c1917', // stone-900
-  '#1e1b4b', // indigo-950
-  '#172554', // blue-950
-  '#134e4a', // teal-900
-  // Light themes
-  '#ffffff', // white
-  '#f8fafc', // slate-50
-  '#f1f5f9', // slate-100
-  '#fefce8', // yellow-50
-  '#ecfdf5', // emerald-50
-  '#eff6ff', // blue-50
-  '#faf5ff', // purple-50
-  '#fdf2f8', // pink-50
-];
+  ...BACKGROUND_COLOR_PALETTES.dark,
+  ...BACKGROUND_COLOR_PALETTES.light,
+].map(({ color }) => color);
 
 export const DEFAULT_CONFIG: EditorConfig = {
   horizontalLines: 3,
@@ -111,5 +142,5 @@ export const DEFAULT_CONFIG: EditorConfig = {
   showVertical: true,
   snapThreshold: 20,
   canvasPadding: 60,
-  backgroundColor: '#0f172a',
+  backgroundColor: BACKGROUND_COLOR_PALETTES.dark[0].color,
 };

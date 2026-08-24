@@ -4,6 +4,7 @@ import * as wails from '../../services/wails';
 import { Project, DEFAULT_CONFIG } from '../../types';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import AboutDialog from '../ui/AboutDialog';
+import { isEditableTarget } from '../../utils/isEditableTarget';
 
 interface FileMenuProps {
   onProjectLoaded?: (project: Project) => void;
@@ -20,7 +21,7 @@ export default function FileMenu({ onProjectLoaded, onProjectSaved, projectName,
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { markers, config, compileSlots } = useEditor();
+  const { markers, config, compileSlots, narrativePaths, activeNarrativePathId, isEditorOpen } = useEditor();
 
   useEffect(() => {
     if (isOpen) {
@@ -80,6 +81,7 @@ export default function FileMenu({ onProjectLoaded, onProjectSaved, projectName,
       setProjectName('Untitled Project');
       setCurrentFilePath('');
       await wails.clearCurrentFilePath();
+      await wails.clearAutosave();
       onProjectLoaded?.(newProj);
     } catch (error) {
       console.error('Failed to create new project:', error);
@@ -174,9 +176,48 @@ export default function FileMenu({ onProjectLoaded, onProjectSaved, projectName,
     config,
     markers,
     compileSlots,
+    narrativePaths,
+    activeNarrativePathId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  }), [projectName, config, markers, compileSlots]);
+  }), [projectName, config, markers, compileSlots, narrativePaths, activeNarrativePathId]);
+
+  // Global Ctrl+N/O/S/Shift+S. The marker editor popup owns Ctrl+S for
+  // itself while open, so this defers to it rather than double-saving.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (isEditableTarget(e.target)) return;
+      if (isEditorOpen) return;
+      if (showNewConfirm || showExitConfirm || showAbout) return;
+
+      const key = e.key.toLowerCase();
+
+      if (key === 'n') {
+        e.preventDefault();
+        handleNewProject();
+      } else if (key === 'o') {
+        e.preventDefault();
+        handleOpenProject();
+      } else if (key === 's' && e.shiftKey) {
+        e.preventDefault();
+        handleSaveAsProject(currentProject);
+      } else if (key === 's') {
+        e.preventDefault();
+        if (currentFilePath) {
+          handleSaveProject(currentProject);
+        } else {
+          handleSaveAsProject(currentProject);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    isEditorOpen, showNewConfirm, showExitConfirm, showAbout,
+    currentFilePath, currentProject, handleNewProject,
+  ]);
 
   return (
     <>

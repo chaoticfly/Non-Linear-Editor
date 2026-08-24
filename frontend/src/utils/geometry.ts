@@ -169,6 +169,7 @@ export function hitTest(
 
   let closestDistance = Infinity;
   let closestLine: LineGeometry | null = null;
+  let closestCrossLine: LineGeometry | null = null;
   let closestSnapPoint: Point | null = null;
 
   // First, check for intersections if both h and v lines exist
@@ -184,6 +185,7 @@ export function hitTest(
           if (distance < closestDistance && distance <= threshold) {
             closestDistance = distance;
             closestLine = hLine; // Use horizontal line as primary for position calculation
+            closestCrossLine = vLine;
             closestSnapPoint = intersection;
           }
         }
@@ -193,6 +195,7 @@ export function hitTest(
 
   // If no intersection found within threshold, check regular lines
   if (closestDistance > threshold) {
+    closestCrossLine = null;
     for (const line of lineGeometries) {
       const distance = distanceToLine(clickPoint, line.start, line.end);
 
@@ -208,6 +211,7 @@ export function hitTest(
     return {
       hit: true,
       lineId: closestLine.id,
+      crossLineId: closestCrossLine?.id ?? null,
       position: positionToNormalized(closestSnapPoint, closestLine),
       snapPoint: closestSnapPoint,
     };
@@ -216,6 +220,7 @@ export function hitTest(
   return {
     hit: false,
     lineId: null,
+    crossLineId: null,
     position: 0,
     snapPoint: null,
   };
@@ -230,4 +235,56 @@ export function getMarkerScreenPosition(
   if (!line) return null;
 
   return normalizedToPosition(position, line);
+}
+
+// Ordered normalized (0-1) stop positions along a line for keyboard
+// navigation: each grid intersection ("joint") with the perpendicular
+// timelines, plus the midpoint between each consecutive pair — so moving
+// alternates half-step, joint, half-step, joint, ...
+export function getLineStops(
+  orientation: 'horizontal' | 'vertical',
+  config: EditorConfig
+): number[] {
+  const perpCount =
+    orientation === 'horizontal'
+      ? (config.showVertical ? config.verticalLines : 0)
+      : (config.showHorizontal ? config.horizontalLines : 0);
+
+  // With fewer than 2 perpendicular lines there's nothing to form joints
+  // from beyond the line's own endpoints.
+  const jointCount = perpCount >= 2 ? perpCount : 2;
+
+  const joints: number[] = [];
+  for (let i = 0; i < jointCount; i++) {
+    joints.push(i / (jointCount - 1));
+  }
+
+  const stops: number[] = [];
+  for (let i = 0; i < joints.length; i++) {
+    stops.push(joints[i]);
+    if (i < joints.length - 1) {
+      stops.push((joints[i] + joints[i + 1]) / 2);
+    }
+  }
+  return stops;
+}
+
+const STOP_EPSILON = 1e-6;
+
+// The next stop strictly ahead of (or behind) the given position, clamped
+// to the line's ends.
+export function getNextStop(position: number, stops: number[], forward: boolean): number {
+  if (stops.length === 0) return position;
+
+  if (forward) {
+    for (const stop of stops) {
+      if (stop > position + STOP_EPSILON) return stop;
+    }
+    return stops[stops.length - 1];
+  }
+
+  for (let i = stops.length - 1; i >= 0; i--) {
+    if (stops[i] < position - STOP_EPSILON) return stops[i];
+  }
+  return stops[0];
 }

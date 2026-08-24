@@ -7,11 +7,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'primary', size = 'md', children, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-editor-bg disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseStyles = 'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-editor-bg disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variantStyles = {
-      primary: 'bg-editor-accent text-white hover:bg-blue-600 focus:ring-blue-500',
-      secondary: 'bg-editor-surface text-gray-200 border border-editor-border hover:bg-editor-hover focus:ring-editor-border',
+      primary: 'bg-editor-accent text-white shadow-[0_8px_24px_rgba(109,140,255,0.18)] hover:bg-indigo-400 focus:ring-indigo-400',
+      secondary: 'bg-white/[0.025] text-gray-200 border border-white/10 hover:bg-white/[0.06] focus:ring-editor-border',
       ghost: 'text-gray-300 hover:bg-editor-hover hover:text-white focus:ring-editor-border',
       danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
     };

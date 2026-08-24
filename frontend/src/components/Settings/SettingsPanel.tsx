@@ -2,10 +2,46 @@
 /** @jsx React.createElement */
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { DEFAULT_BACKGROUND_COLORS } from '../../types';
+import { BACKGROUND_COLOR_PALETTES, DEFAULT_BACKGROUND_COLORS } from '../../types';
 
 export default function SettingsPanel() {
   const { config, updateConfig, markers } = useEditor();
+  const selectedPreset = [...BACKGROUND_COLOR_PALETTES.dark, ...BACKGROUND_COLOR_PALETTES.light]
+    .find(({ color }) => color === config.backgroundColor);
+
+  const renderPalette = (palette: 'dark' | 'light') => (
+    <div className="grid grid-cols-4 gap-2">
+      {BACKGROUND_COLOR_PALETTES[palette].map(({ name, color }) => {
+        const isSelected = config.backgroundColor === color;
+
+        return (
+          <button
+            key={color}
+            type="button"
+            onClick={() => updateConfig({ backgroundColor: color })}
+            className={`group relative aspect-square w-full min-w-8 overflow-hidden rounded-xl border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-editor-accent focus:ring-offset-2 focus:ring-offset-editor-bg ${
+              isSelected
+                ? 'border-white/90 ring-2 ring-editor-accent shadow-lg scale-105'
+                : palette === 'dark'
+                  ? 'border-white/10 hover:border-white/50 hover:-translate-y-0.5'
+                  : 'border-black/15 hover:border-white/80 hover:-translate-y-0.5'
+            }`}
+            style={{ backgroundColor: color }}
+            title={`${name} (${color})`}
+            aria-label={`Use ${name} background`}
+            aria-pressed={isSelected}
+          >
+            <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            {isSelected && (
+              <svg className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow-md" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M16.704 5.292a1 1 0 010 1.416l-8 8a1 1 0 01-1.416 0l-4-4a1 1 0 011.416-1.416L8 12.586l7.296-7.294a1 1 0 011.408 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="p-4 space-y-6">
@@ -115,41 +151,13 @@ export default function SettingsPanel() {
           {/* Dark themes */}
           <div>
             <label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">Dark</label>
-            <div className="flex flex-wrap gap-2">
-              {DEFAULT_BACKGROUND_COLORS.slice(0, 8).map((color) => (
-                <button
-                  key={color}
-                  onClick={() => updateConfig({ backgroundColor: color })}
-                  className={`w-8 h-8 rounded-lg transition-all duration-200 border-2 ${
-                    config.backgroundColor === color
-                      ? 'border-white scale-110'
-                      : 'border-transparent hover:scale-110 hover:border-gray-600'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  title={color}
-                />
-              ))}
-            </div>
+            {renderPalette('dark')}
           </div>
 
           {/* Light themes */}
           <div>
             <label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">Light</label>
-            <div className="flex flex-wrap gap-2">
-              {DEFAULT_BACKGROUND_COLORS.slice(8).map((color) => (
-                <button
-                  key={color}
-                  onClick={() => updateConfig({ backgroundColor: color })}
-                  className={`w-8 h-8 rounded-lg transition-all duration-200 border-2 ${
-                    config.backgroundColor === color
-                      ? 'border-editor-accent scale-110'
-                      : 'border-gray-400 hover:scale-110 hover:border-gray-300'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  title={color}
-                />
-              ))}
-            </div>
+            {renderPalette('light')}
           </div>
 
           {/* Custom color picker */}
@@ -182,6 +190,11 @@ export default function SettingsPanel() {
               </div>
             </div>
           </div>
+
+          <p className="text-xs text-gray-400">
+            Selected: <span className="text-gray-200">{selectedPreset?.name ?? 'Custom'}</span>
+            <span className="ml-1 font-mono text-gray-500">{config.backgroundColor.toUpperCase()}</span>
+          </p>
         </div>
       </div>
 

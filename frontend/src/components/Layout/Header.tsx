@@ -1,9 +1,11 @@
 /** @jsxRuntime classic */
 /** @jsx React.createElement */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FileMenu from './FileMenu';
+import ShortcutsDialog from '../ui/ShortcutsDialog';
 import { Project } from '../../types';
 import { useEditor } from '../../context/EditorContext';
+import { isEditableTarget } from '../../utils/isEditableTarget';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -18,6 +20,18 @@ export default function Header({ onToggleSidebar, isSidebarOpen, onToggleCompile
   const { projectName, setProjectName } = useEditor();
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(projectName);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '?' && !isEditableTarget(e.target)) {
+        e.preventDefault();
+        setIsShortcutsOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleSaveName = () => {
     if (tempName.trim()) {
@@ -38,17 +52,17 @@ export default function Header({ onToggleSidebar, isSidebarOpen, onToggleCompile
   };
 
   return (
-    <header className="h-14 bg-editor-surface border-b border-editor-border flex items-center justify-between px-4">
+    <header className="app-header h-14 bg-editor-surface border-b border-editor-border flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
         {/* File Menu */}
         <FileMenu onProjectLoaded={onProjectLoaded} onProjectSaved={onProjectSaved} projectName={projectName} setProjectName={setProjectName} />
 
         {/* Logo / Title */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <div className="brand-mark w-8 h-8 rounded-lg flex items-center justify-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="w-5 h-5 text-white"
+              className="w-5 h-5 text-indigo-100"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -80,7 +94,7 @@ export default function Header({ onToggleSidebar, isSidebarOpen, onToggleCompile
                 setTempName(projectName);
                 setIsEditingName(true);
               }}
-              className="text-lg font-semibold text-white cursor-pointer hover:text-blue-300 transition-colors px-2 py-1 rounded hover:bg-editor-hover"
+              className="project-title text-lg text-white cursor-pointer hover:text-indigo-200 transition-colors px-2 py-1 rounded hover:bg-editor-hover"
               title="Click to edit project name"
             >
               {projectName}
@@ -90,20 +104,15 @@ export default function Header({ onToggleSidebar, isSidebarOpen, onToggleCompile
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Help hint */}
-        <div className="text-sm text-gray-400 mr-4 hidden sm:block">
-          Click on a line to add a marker. To re-arrange and compile use -&gt;
-        </div>
-
         {/* Compile toggle */}
         <button
           onClick={onToggleCompile}
           className={`p-2 rounded-lg transition-colors ${
             isCompileOpen
-              ? 'bg-green-600 text-white'
+              ? 'bg-indigo-400/15 text-indigo-200 ring-1 ring-indigo-300/30'
               : 'text-gray-400 hover:text-white hover:bg-editor-hover'
           }`}
-          title="Compile document"
+          title="Build a document"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -129,7 +138,7 @@ export default function Header({ onToggleSidebar, isSidebarOpen, onToggleCompile
               ? 'bg-editor-accent text-white'
               : 'text-gray-400 hover:text-white hover:bg-editor-hover'
           }`}
-          title="Toggle settings"
+          title="Canvas settings"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -152,7 +161,31 @@ export default function Header({ onToggleSidebar, isSidebarOpen, onToggleCompile
             />
           </svg>
         </button>
+
+        {/* Keyboard shortcuts reference */}
+        <button
+          onClick={() => setIsShortcutsOpen(true)}
+          className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-editor-hover transition-colors"
+          title="Keyboard shortcuts (?)"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </button>
       </div>
+
+      <ShortcutsDialog isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
     </header>
   );
 }

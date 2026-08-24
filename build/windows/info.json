@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "1.0.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "1.0.0",
+			"CompanyName": "Likhi Lakeerain",
+			"FileDescription": "Written Lines timeline editor",
+			"LegalCopyright": "Copyright 2026",
+			"ProductName": "Likhi Lakeerain",
+			"Comments": "Likhi Lakeerain desktop application"
+		}
+	}
+}

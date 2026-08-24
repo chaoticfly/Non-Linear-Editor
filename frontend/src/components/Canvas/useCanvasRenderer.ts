@@ -6,6 +6,7 @@ import {
   drawLineLabels,
   drawMarkers,
   drawHoverIndicator,
+  drawNarrativePath,
 } from './canvasUtils';
 
 interface UseCanvasRendererProps {
@@ -14,6 +15,7 @@ interface UseCanvasRendererProps {
   hoveredMarkerId: string | null;
   selectedMarkerId: string | null;
   hoverSnapPoint: Point | null;
+  narrativeMarkerIds?: string[];
 }
 
 export function useCanvasRenderer({
@@ -22,6 +24,7 @@ export function useCanvasRenderer({
   hoveredMarkerId,
   selectedMarkerId,
   hoverSnapPoint,
+  narrativeMarkerIds = [],
 }: UseCanvasRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
@@ -59,8 +62,14 @@ export function useCanvasRenderer({
     }
 
     // Draw markers
+    drawNarrativePath(
+      ctx,
+      narrativeMarkerIds
+        .map((id) => markers.find((marker) => marker.id === id))
+        .filter((marker): marker is MarkerWithGeometry => Boolean(marker))
+    );
     drawMarkers(ctx, markers, hoveredMarkerId, selectedMarkerId);
-  }, [lineGeometries, markers, hoveredMarkerId, selectedMarkerId, hoverSnapPoint]);
+  }, [lineGeometries, markers, hoveredMarkerId, selectedMarkerId, hoverSnapPoint, narrativeMarkerIds]);
 
   useEffect(() => {
     // Cancel any pending animation frame

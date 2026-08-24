@@ -7,7 +7,7 @@ interface AboutDialogProps {
 
 export default function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="About">
+    <Modal isOpen={isOpen} onClose={onClose} title="About" resizable={false}>
       <div className="flex flex-col items-center text-center py-4">
         {/* App Icon */}
         <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20">

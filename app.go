@@ -1,62 +1,53 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // App struct
 type App struct {
-	ctx             context.Context
+	app             *application.App
 	currentFilePath string
 }
 
+const (
+	trayNewProjectEvent  = "tray:new-project"
+	trayOpenProjectEvent = "tray:open-project"
+)
+
 // NewApp creates a new App application struct
-func NewApp() *App {
-	return &App{}
-}
-
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
-}
-
-// beforeClose is called when the user attempts to close the window via the X button.
-// It shows a native confirmation dialog to prevent accidental data loss.
-func (a *App) beforeClose(ctx context.Context) (prevent bool) {
-	dialog, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
-		Type:          runtime.QuestionDialog,
-		Title:         "Exit Likhi Lakeerain",
-		Message:       "Are you sure you want to exit? Any unsaved changes will be lost.",
-		DefaultButton: "No",
-	})
-	if err != nil {
-		return false
-	}
-	return dialog != "Yes"
+func NewApp(app *application.App) *App {
+	return &App{app: app}
 }
 
 // QuitApp terminates the application (called from frontend after confirmation)
 func (a *App) QuitApp() {
-	runtime.Quit(a.ctx)
+	a.app.Quit()
 }
 
 // Project represents a saved project state
 type Project struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Config       Config    `json:"config"`
-	Markers      []Marker  `json:"markers"`
-	CompileSlots []string  `json:"compileSlots"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	ID                    string          `json:"id"`
+	Name                  string          `json:"name"`
+	Config                Config          `json:"config"`
+	Markers               []Marker        `json:"markers"`
+	CompileSlots          []string        `json:"compileSlots"`
+	NarrativePaths        []NarrativePath `json:"narrativePaths,omitempty"`
+	ActiveNarrativePathID string          `json:"activeNarrativePathId,omitempty"`
+	CreatedAt             time.Time       `json:"createdAt"`
+	UpdatedAt             time.Time       `json:"updatedAt"`
+}
+
+type NarrativePath struct {
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	MarkerIDs []string `json:"markerIds"`
 }
 
 // Config represents editor configuration
@@ -72,16 +63,19 @@ type Config struct {
 
 // Marker represents a marker on the timeline
 type Marker struct {
-	ID        string    `json:"id"`
-	LineID    string    `json:"lineId"`
-	Position  float64   `json:"position"`
-	Label     string    `json:"label"`
-	Content   string    `json:"content"`
-	Tags      []string  `json:"tags"`
-	Category  string    `json:"category"`
-	Color     string    `json:"color"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID              string    `json:"id"`
+	LineID          string    `json:"lineId"`
+	CrossLineID     string    `json:"crossLineId,omitempty"`
+	Position        float64   `json:"position"`
+	Label           string    `json:"label"`
+	Content         string    `json:"content"`
+	Tags            []string  `json:"tags"`
+	Category        string    `json:"category"`
+	Color           string    `json:"color"`
+	LinkedMarkerIDs []string  `json:"linkedMarkerIds,omitempty"`
+	WritingStatus   string    `json:"writingStatus,omitempty"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 // CompiledSection represents a section for export
@@ -105,14 +99,10 @@ func (a *App) SaveProject(project Project) (string, error) {
 
 // SaveProjectAs saves a project to a new file location
 func (a *App) SaveProjectAs(project Project) (string, error) {
-	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Save Project",
-		DefaultFilename: project.Name + ".nle",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "Non-Linear Editor Projects", Pattern: "*.nle"},
-			{DisplayName: "JSON Files", Pattern: "*.json"},
-		},
-	})
+	filePath, err := a.app.Dialog.SaveFile().SetMessage("Save Project").
+		SetFilename(project.Name+".nle").
+		AddFilter("Non-Linear Editor Projects", "*.nle").
+		AddFilter("JSON Files", "*.json").PromptForSingleSelection()
 	if err != nil {
 		return "", err
 	}
@@ -147,13 +137,9 @@ func (a *App) saveToFile(project Project, filePath string) (string, error) {
 
 // LoadProject loads a project from a file
 func (a *App) LoadProject() (*Project, error) {
-	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Open Project",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "Non-Linear Editor Projects", Pattern: "*.nle"},
-			{DisplayName: "JSON Files", Pattern: "*.json"},
-		},
-	})
+	filePath, err := a.app.Dialog.OpenFile().SetTitle("Open Project").
+		AddFilter("Non-Linear Editor Projects", "*.nle").
+		AddFilter("JSON Files", "*.json").PromptForSingleSelection()
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +167,89 @@ func (a *App) LoadProjectFromPath(filePath string) (*Project, error) {
 	a.addToRecentProjects(filePath, project.Name)
 
 	return &project, nil
+}
+
+// AutosaveEnvelope wraps a project snapshot with when it was autosaved,
+// so a recovery prompt can tell the user how stale it is.
+type AutosaveEnvelope struct {
+	Project Project   `json:"project"`
+	SavedAt time.Time `json:"savedAt"`
+}
+
+func (a *App) autosavePath() (string, error) {
+	configDir, err := a.getConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(configDir, "autosave.json"), nil
+}
+
+// AutosaveProject silently writes a recovery snapshot. It never touches the
+// user's actual project file, so it can't clobber a deliberate save.
+func (a *App) AutosaveProject(project Project) error {
+	path, err := a.autosavePath()
+	if err != nil {
+		return err
+	}
+
+	envelope := AutosaveEnvelope{Project: project, SavedAt: time.Now()}
+	data, err := json.MarshalIndent(envelope, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, data, 0644)
+}
+
+// HasAutosave reports whether a recovery snapshot exists from a previous session.
+func (a *App) HasAutosave() (bool, error) {
+	path, err := a.autosavePath()
+	if err != nil {
+		return false, err
+	}
+
+	_, err = os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// LoadAutosave reads the recovery snapshot, if any.
+func (a *App) LoadAutosave() (*AutosaveEnvelope, error) {
+	path, err := a.autosavePath()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var envelope AutosaveEnvelope
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		return nil, err
+	}
+	return &envelope, nil
+}
+
+// ClearAutosave removes the recovery snapshot (after a successful explicit
+// save, or once the user has decided not to recover it).
+func (a *App) ClearAutosave() error {
+	path, err := a.autosavePath()
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(path)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 // GetCurrentFilePath returns the current file path
@@ -288,13 +357,9 @@ func (a *App) getConfigDir() (string, error) {
 
 // ExportODT exports the compiled content to ODT format
 func (a *App) ExportODT(sections []CompiledSection) (string, error) {
-	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Export to ODT",
-		DefaultFilename: "document.odt",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "OpenDocument Text", Pattern: "*.odt"},
-		},
-	})
+	filePath, err := a.app.Dialog.SaveFile().SetMessage("Export to ODT").
+		SetFilename("document.odt").AddFilter("OpenDocument Text", "*.odt").
+		PromptForSingleSelection()
 	if err != nil {
 		return "", err
 	}
@@ -312,13 +377,9 @@ func (a *App) ExportODT(sections []CompiledSection) (string, error) {
 
 // ExportHTML exports the compiled content to HTML format
 func (a *App) ExportHTML(sections []CompiledSection) (string, error) {
-	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Export to HTML",
-		DefaultFilename: "document.html",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "HTML Files", Pattern: "*.html"},
-		},
-	})
+	filePath, err := a.app.Dialog.SaveFile().SetMessage("Export to HTML").
+		SetFilename("document.html").AddFilter("HTML Files", "*.html").
+		PromptForSingleSelection()
 	if err != nil {
 		return "", err
 	}
@@ -467,7 +528,7 @@ func (a *App) NewProject() Project {
 			VerticalLines:   10,
 			ShowHorizontal:  true,
 			ShowVertical:    true,
-			BackgroundColor: "#0f172a",
+			BackgroundColor: "#0b0c10",
 			SnapThreshold:   10,
 			CanvasPadding:   40,
 		},

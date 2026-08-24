@@ -8,11 +8,11 @@ export default {
     extend: {
       colors: {
         editor: {
-          bg: '#0f172a',
-          surface: '#1e293b',
-          border: '#334155',
-          accent: '#3b82f6',
-          hover: '#475569',
+          bg: '#0b0c10',
+          surface: '#14151b',
+          border: '#292b34',
+          accent: '#6d8cff',
+          hover: '#22242d',
         }
       },
       animation: {

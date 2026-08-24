@@ -8,7 +8,26 @@ LikhiLakeerain
 LikhiLakeerain.app
 
 # Wails build
-build/
+.task/
+build/*
+!build/appicon.png
+!build/Taskfile.yml
+!build/config.yml
+!build/windows/
+build/windows/*
+!build/windows/Taskfile.yml
+!build/windows/icon.ico
+!build/windows/info.json
+!build/windows/wails.exe.manifest
+!build/darwin/
+build/darwin/*
+!build/darwin/Taskfile.yml
+!build/darwin/Info.plist
+!build/darwin/Info.dev.plist
+!build/darwin/icons.icns
+!build/linux/
+build/linux/*
+!build/linux/Taskfile.yml
 /bin/
 /dist/
 

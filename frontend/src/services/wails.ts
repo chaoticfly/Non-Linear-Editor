@@ -1,10 +1,11 @@
 // Wails service wrapper
 // This file provides a unified API for both Wails desktop and web browser contexts
 
-import { Project, CompiledSection } from '../types';
+import { Project, CompiledSection, AutosaveEnvelope } from '../types';
+import * as AppBindings from '../../bindings/likhi-lakeerain/app';
 
 // Check if running in Wails context
-const isWails = () => typeof (window as any).go !== 'undefined';
+const isWails = () => typeof (window as any)._wails !== 'undefined';
 
 // Type definitions for Wails bindings (auto-generated when running wails dev)
 declare global {
@@ -25,6 +26,10 @@ declare global {
           ExportODT: (sections: CompiledSection[]) => Promise<string>;
           ExportHTML: (sections: CompiledSection[]) => Promise<string>;
           QuitApp: () => Promise<void>;
+          AutosaveProject: (project: Project) => Promise<void>;
+          HasAutosave: () => Promise<boolean>;
+          LoadAutosave: () => Promise<AutosaveEnvelope | null>;
+          ClearAutosave: () => Promise<void>;
         };
       };
     };
@@ -40,11 +45,12 @@ export interface RecentProject {
 // Storage key for browser fallback
 const STORAGE_KEY = 'nonlinear-editor-project';
 const RECENT_KEY = 'nonlinear-editor-recent';
+const AUTOSAVE_KEY = 'nonlinear-editor-autosave';
 
 // Save project
 export async function saveProject(project: Project): Promise<string | null> {
-  if (isWails() && window.go) {
-    const result = await window.go.main.App.SaveProject(project);
+  if (isWails()) {
+    const result = await AppBindings.SaveProject(project as any);
     return result || null;
   }
 
@@ -55,8 +61,8 @@ export async function saveProject(project: Project): Promise<string | null> {
 
 // Save project as (always prompt for location)
 export async function saveProjectAs(project: Project): Promise<string | null> {
-  if (isWails() && window.go) {
-    const result = await window.go.main.App.SaveProjectAs(project);
+  if (isWails()) {
+    const result = await AppBindings.SaveProjectAs(project as any);
     return result || null;
   }
 
@@ -73,9 +79,9 @@ export async function saveProjectAs(project: Project): Promise<string | null> {
 
 // Load project (open dialog)
 export async function loadProject(): Promise<Project | null> {
-  if (isWails() && window.go) {
-    const result = await window.go.main.App.LoadProject();
-    return result || null;
+  if (isWails()) {
+    const result = await AppBindings.LoadProject();
+    return (result as unknown as Project) || null;
   }
 
   // Browser fallback: file input
@@ -104,10 +110,10 @@ export async function loadProject(): Promise<Project | null> {
 
 // Load project from path (for recent projects)
 export async function loadProjectFromPath(path: string): Promise<Project | null> {
-  if (isWails() && window.go) {
+  if (isWails()) {
     try {
-      const result = await window.go.main.App.LoadProjectFromPath(path);
-      return result || null;
+      const result = await AppBindings.LoadProjectFromPath(path);
+      return (result as unknown as Project) || null;
     } catch {
       return null;
     }
@@ -119,9 +125,9 @@ export async function loadProjectFromPath(path: string): Promise<Project | null>
 
 // Get recent projects
 export async function getRecentProjects(): Promise<RecentProject[]> {
-  if (isWails() && window.go) {
+  if (isWails()) {
     try {
-      return await window.go.main.App.GetRecentProjects();
+      return (await AppBindings.GetRecentProjects()) || [];
     } catch {
       return [];
     }
@@ -138,15 +144,81 @@ export async function getRecentProjects(): Promise<RecentProject[]> {
 
 // Clear current file path (for new project)
 export async function clearCurrentFilePath(): Promise<void> {
-  if (isWails() && window.go) {
-    await window.go.main.App.ClearCurrentFilePath();
+  if (isWails()) {
+    await AppBindings.ClearCurrentFilePath();
   }
+}
+
+// Silently write a recovery snapshot. Never touches the user's chosen save
+// file, so it can't clobber a deliberate save.
+export async function autosaveProject(project: Project): Promise<void> {
+  if (isWails()) {
+    try {
+      await AppBindings.AutosaveProject(project as any);
+    } catch {
+      // Autosave failures shouldn't interrupt the user's work
+    }
+    return;
+  }
+
+  try {
+    const envelope: AutosaveEnvelope = { project, savedAt: new Date().toISOString() };
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(envelope));
+  } catch {
+    // Ignore quota errors etc.
+  }
+}
+
+// Check whether a recovery snapshot exists from a previous session
+export async function hasAutosave(): Promise<boolean> {
+  if (isWails()) {
+    try {
+      return await AppBindings.HasAutosave();
+    } catch {
+      return false;
+    }
+  }
+
+  return localStorage.getItem(AUTOSAVE_KEY) !== null;
+}
+
+// Load the recovery snapshot, if any
+export async function loadAutosave(): Promise<AutosaveEnvelope | null> {
+  if (isWails()) {
+    try {
+      return await AppBindings.LoadAutosave() as unknown as AutosaveEnvelope | null;
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const raw = localStorage.getItem(AUTOSAVE_KEY);
+    return raw ? (JSON.parse(raw) as AutosaveEnvelope) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Remove the recovery snapshot (after a successful explicit save, or once
+// the user declines to recover it)
+export async function clearAutosave(): Promise<void> {
+  if (isWails()) {
+    try {
+      await AppBindings.ClearAutosave();
+    } catch {
+      // Nothing to do if this fails
+    }
+    return;
+  }
+
+  localStorage.removeItem(AUTOSAVE_KEY);
 }
 
 // Export to ODT
 export async function exportODT(sections: CompiledSection[]): Promise<string | null> {
-  if (isWails() && window.go) {
-    const result = await window.go.main.App.ExportODT(sections);
+  if (isWails()) {
+    const result = await AppBindings.ExportODT(sections as any);
     return result || null;
   }
 
@@ -157,8 +229,8 @@ export async function exportODT(sections: CompiledSection[]): Promise<string | n
 
 // Export to HTML
 export async function exportHTML(sections: CompiledSection[]): Promise<string | null> {
-  if (isWails() && window.go) {
-    const result = await window.go.main.App.ExportHTML(sections);
+  if (isWails()) {
+    const result = await AppBindings.ExportHTML(sections as any);
     return result || null;
   }
 
@@ -258,25 +330,25 @@ export function isDesktopApp(): boolean {
 
 // Create a new marker
 export async function createMarker(lineID: string, position: number, label: string, color: string) {
-  if (isWails() && window.go) {
-    return await window.go.main.App.CreateMarker(lineID, position, label, color);
+  if (isWails()) {
+    return await AppBindings.CreateMarker(lineID, position, label, color);
   }
   return null;
 }
 
 // Update an existing marker
 export async function updateMarker(id: string, label: string, content: string, tags: string[], category: string, color: string) {
-  if (isWails() && window.go) {
-    return await window.go.main.App.UpdateMarker(id, label, content, tags, category, color);
+  if (isWails()) {
+    return await AppBindings.UpdateMarker(id, label, content, tags, category, color);
   }
   return null;
 }
 
 // Create a new project
 export async function newProject(): Promise<Project | null> {
-  if (isWails() && window.go) {
+  if (isWails()) {
     try {
-      return await window.go.main.App.NewProject();
+      return await AppBindings.NewProject() as unknown as Project;
     } catch {
       return null;
     }
@@ -291,7 +363,7 @@ export async function newProject(): Promise<Project | null> {
       verticalLines: 10,
       showHorizontal: true,
       showVertical: true,
-      backgroundColor: '#0f172a',
+      backgroundColor: '#0b0c10',
       snapThreshold: 10,
       canvasPadding: 40,
     },
@@ -304,9 +376,9 @@ export async function newProject(): Promise<Project | null> {
 
 // Get current file path
 export async function getCurrentFilePath(): Promise<string> {
-  if (isWails() && window.go) {
+  if (isWails()) {
     try {
-      return await window.go.main.App.GetCurrentFilePath();
+      return await AppBindings.GetCurrentFilePath();
     } catch {
       return '';
     }
@@ -316,9 +388,9 @@ export async function getCurrentFilePath(): Promise<string> {
 
 // Quit the application
 export async function quit(): Promise<void> {
-  if (isWails() && window.go) {
+  if (isWails()) {
     try {
-      await window.go.main.App.QuitApp();
+      await AppBindings.QuitApp();
     } catch {
       window.close();
     }

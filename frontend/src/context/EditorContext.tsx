@@ -1,6 +1,8 @@
-import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect, ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Marker, Timeline, EditorConfig, DEFAULT_CONFIG } from '../types';
+import { Marker, Timeline, EditorConfig, DEFAULT_CONFIG, NarrativePath, Point } from '../types';
+
+const MAX_HISTORY = 50;
 
 interface EditorContextType {
   // Project
@@ -17,8 +19,8 @@ interface EditorContextType {
   // Markers
   markers: Marker[];
   setMarkers: (markers: Marker[]) => void;
-  addMarker: (lineId: string, position: number) => Marker;
-  updateMarker: (id: string, updates: Partial<Marker>) => void;
+  addMarker: (lineId: string, position: number, crossLineId?: string | null) => Marker;
+  updateMarker: (id: string, updates: Partial<Marker>, historyLabel?: string) => void;
   deleteMarker: (id: string) => void;
   getMarkerById: (id: string) => Marker | undefined;
 
@@ -28,9 +30,10 @@ interface EditorContextType {
 
   // Editor popup
   isEditorOpen: boolean;
-  openEditor: (markerId: string) => void;
+  openEditor: (markerId: string, anchor?: Point) => void;
   closeEditor: () => void;
   editingMarkerId: string | null;
+  editorAnchor: Point | null;
 
   // Compile
   compileSlots: string[]; // Array of marker IDs in compile order
@@ -39,6 +42,19 @@ interface EditorContextType {
   removeFromCompile: (markerId: string) => void;
   reorderCompile: (fromIndex: number, toIndex: number) => void;
   clearCompile: () => void;
+  narrativePaths: NarrativePath[];
+  activeNarrativePathId: string;
+  setNarrativePaths: (paths: NarrativePath[], activeId?: string) => void;
+  createNarrativePath: (name: string) => void;
+  renameNarrativePath: (id: string, name: string) => void;
+  selectNarrativePath: (id: string) => void;
+  deleteNarrativePath: (id: string) => void;
+
+  // Undo/redo (covers marker add/update/delete)
+  undo: () => string | null;
+  redo: () => string | null;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -90,7 +106,12 @@ export function EditorProvider({ children }: EditorProviderProps) {
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingMarkerId, setEditingMarkerId] = useState<string | null>(null);
+  const [editorAnchor, setEditorAnchor] = useState<Point | null>(null);
   const [compileSlots, setCompileSlots] = useState<string[]>([]);
+  const [narrativePaths, setNarrativePathsState] = useState<NarrativePath[]>([
+    { id: 'main', name: 'Draft', markerIds: [] },
+  ]);
+  const [activeNarrativePathId, setActiveNarrativePathId] = useState('main');
 
   const timelines = useMemo(() => generateTimelines(config), [
     config.horizontalLines,
@@ -103,33 +124,102 @@ export function EditorProvider({ children }: EditorProviderProps) {
     setConfig(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const addMarker = useCallback((lineId: string, position: number): Marker => {
+  // Undo/redo history for marker add/update/delete. Kept in refs (not
+  // state) since only the imperative undo()/redo() calls need to read it —
+  // canUndo/canRedo below is the only thing that needs to trigger a render.
+  const markersRef = useRef<Marker[]>(markers);
+  useEffect(() => {
+    markersRef.current = markers;
+  }, [markers]);
+
+  interface HistoryEntry {
+    markers: Marker[];
+    label: string;
+  }
+  const historyPastRef = useRef<HistoryEntry[]>([]);
+  const historyFutureRef = useRef<HistoryEntry[]>([]);
+  const [historyVersion, setHistoryVersion] = useState(0);
+
+  const pushHistory = useCallback((label: string) => {
+    historyPastRef.current = [
+      ...historyPastRef.current,
+      { markers: markersRef.current, label },
+    ].slice(-MAX_HISTORY);
+    historyFutureRef.current = [];
+    setHistoryVersion(v => v + 1);
+  }, []);
+
+  const resetHistory = useCallback(() => {
+    historyPastRef.current = [];
+    historyFutureRef.current = [];
+    setHistoryVersion(v => v + 1);
+  }, []);
+
+  const undo = useCallback((): string | null => {
+    const past = historyPastRef.current;
+    if (past.length === 0) return null;
+
+    const entry = past[past.length - 1];
+    historyPastRef.current = past.slice(0, -1);
+    historyFutureRef.current = [
+      { markers: markersRef.current, label: entry.label },
+      ...historyFutureRef.current,
+    ].slice(0, MAX_HISTORY);
+
+    setMarkers(entry.markers);
+    setHistoryVersion(v => v + 1);
+    return entry.label;
+  }, []);
+
+  const redo = useCallback((): string | null => {
+    const future = historyFutureRef.current;
+    if (future.length === 0) return null;
+
+    const entry = future[0];
+    historyFutureRef.current = future.slice(1);
+    historyPastRef.current = [
+      ...historyPastRef.current,
+      { markers: markersRef.current, label: entry.label },
+    ].slice(-MAX_HISTORY);
+
+    setMarkers(entry.markers);
+    setHistoryVersion(v => v + 1);
+    return entry.label;
+  }, []);
+
+  const addMarker = useCallback((lineId: string, position: number, crossLineId?: string | null): Marker => {
     const newMarker: Marker = {
       id: uuidv4(),
       lineId,
+      ...(crossLineId ? { crossLineId } : {}),
       position,
       label: '',
       content: '',
       tags: [],
       category: '',
       color: '#3b82f6',
+      linkedMarkerIds: [],
+      writingStatus: 'draft',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
+    pushHistory('add marker');
     setMarkers(prev => [...prev, newMarker]);
     return newMarker;
-  }, []);
+  }, [pushHistory]);
 
-  const updateMarker = useCallback((id: string, updates: Partial<Marker>) => {
+  const updateMarker = useCallback((id: string, updates: Partial<Marker>, historyLabel: string = 'edit marker') => {
+    pushHistory(historyLabel);
     setMarkers(prev => prev.map(marker =>
       marker.id === id
         ? { ...marker, ...updates, updatedAt: new Date() }
         : marker
     ));
-  }, []);
+  }, [pushHistory]);
 
   const deleteMarker = useCallback((id: string) => {
+    pushHistory('delete marker');
     setMarkers(prev => prev.filter(marker => marker.id !== id));
     if (selectedMarkerId === id) {
       setSelectedMarkerId(null);
@@ -138,20 +228,22 @@ export function EditorProvider({ children }: EditorProviderProps) {
       setIsEditorOpen(false);
       setEditingMarkerId(null);
     }
-  }, [selectedMarkerId, editingMarkerId]);
+  }, [selectedMarkerId, editingMarkerId, pushHistory]);
 
   const getMarkerById = useCallback((id: string) => {
     return markers.find(m => m.id === id);
   }, [markers]);
 
-  const openEditor = useCallback((markerId: string) => {
+  const openEditor = useCallback((markerId: string, anchor?: Point) => {
     setEditingMarkerId(markerId);
+    setEditorAnchor(anchor || null);
     setIsEditorOpen(true);
   }, []);
 
   const closeEditor = useCallback(() => {
     setIsEditorOpen(false);
     setEditingMarkerId(null);
+    setEditorAnchor(null);
   }, []);
 
   const addToCompile = useCallback((markerId: string) => {
@@ -160,6 +252,51 @@ export function EditorProvider({ children }: EditorProviderProps) {
       return [...prev, markerId];
     });
   }, []);
+
+  useEffect(() => {
+    setNarrativePathsState((paths) => paths.map((path) =>
+      path.id === activeNarrativePathId ? { ...path, markerIds: compileSlots } : path
+    ));
+  }, [compileSlots, activeNarrativePathId]);
+
+  const setNarrativePaths = useCallback((paths: NarrativePath[], activeId?: string) => {
+    const safePaths = paths.length ? paths : [{ id: 'main', name: 'Draft', markerIds: [] }];
+    const nextId = activeId && safePaths.some((path) => path.id === activeId) ? activeId : safePaths[0].id;
+    setNarrativePathsState(safePaths);
+    setActiveNarrativePathId(nextId);
+    setCompileSlots(safePaths.find((path) => path.id === nextId)?.markerIds || []);
+  }, []);
+
+  const createNarrativePath = useCallback((name: string) => {
+    const id = uuidv4();
+    const path = { id, name: name.trim() || 'New path', markerIds: [] };
+    setNarrativePathsState((paths) => [...paths, path]);
+    setActiveNarrativePathId(id);
+    setCompileSlots([]);
+  }, []);
+
+  const renameNarrativePath = useCallback((id: string, name: string) => {
+    setNarrativePathsState((paths) => paths.map((path) => path.id === id ? { ...path, name: name.trim() || path.name } : path));
+  }, []);
+
+  const selectNarrativePath = useCallback((id: string) => {
+    const path = narrativePaths.find((candidate) => candidate.id === id);
+    if (!path) return;
+    setActiveNarrativePathId(id);
+    setCompileSlots(path.markerIds);
+  }, [narrativePaths]);
+
+  const deleteNarrativePath = useCallback((id: string) => {
+    setNarrativePathsState((paths) => {
+      if (paths.length <= 1) return paths;
+      const next = paths.filter((path) => path.id !== id);
+      if (id === activeNarrativePathId) {
+        setActiveNarrativePathId(next[0].id);
+        setCompileSlots(next[0].markerIds);
+      }
+      return next;
+    });
+  }, [activeNarrativePathId]);
 
   const removeFromCompile = useCallback((markerId: string) => {
     setCompileSlots(prev => prev.filter(id => id !== markerId));
@@ -179,8 +316,11 @@ export function EditorProvider({ children }: EditorProviderProps) {
   }, []);
 
   const setMarkersCallback = useCallback((newMarkers: Marker[]) => {
+    // Bulk replacement (loading/creating a project) starts a fresh history,
+    // rather than letting undo reach back into a previous project's markers.
+    resetHistory();
     setMarkers(newMarkers);
-  }, []);
+  }, [resetHistory]);
 
   const setCompileSlotsCallback = useCallback((slots: string[]) => {
     setCompileSlots(slots);
@@ -204,19 +344,33 @@ export function EditorProvider({ children }: EditorProviderProps) {
     openEditor,
     closeEditor,
     editingMarkerId,
+    editorAnchor,
     compileSlots,
     setCompileSlots: setCompileSlotsCallback,
     addToCompile,
     removeFromCompile,
     reorderCompile,
     clearCompile,
+    narrativePaths,
+    activeNarrativePathId,
+    setNarrativePaths,
+    createNarrativePath,
+    renameNarrativePath,
+    selectNarrativePath,
+    deleteNarrativePath,
+    undo,
+    redo,
+    canUndo: historyPastRef.current.length > 0,
+    canRedo: historyFutureRef.current.length > 0,
   }), [
     projectName, setProjectName, config, updateConfig, timelines,
     markers, setMarkersCallback, addMarker, updateMarker, deleteMarker,
     getMarkerById, selectedMarkerId, setSelectedMarkerId, isEditorOpen,
-    openEditor, closeEditor, editingMarkerId, compileSlots,
+    openEditor, closeEditor, editingMarkerId, editorAnchor, compileSlots,
     setCompileSlotsCallback, addToCompile, removeFromCompile,
-    reorderCompile, clearCompile,
+    reorderCompile, clearCompile, narrativePaths, activeNarrativePathId,
+    setNarrativePaths, createNarrativePath, renameNarrativePath, selectNarrativePath,
+    deleteNarrativePath, undo, redo, historyVersion,
   ]);
 
   return (

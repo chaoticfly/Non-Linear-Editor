@@ -7,7 +7,7 @@ interface UseCanvasInteractionProps {
   markers: MarkerWithGeometry[];
   snapThreshold: number;
   onMarkerClick: (markerId: string) => void;
-  onLineClick: (lineId: string, position: number) => void;
+  onLineClick: (lineId: string, position: number, crossLineId: string | null) => void;
 }
 
 interface UseCanvasInteractionResult {
@@ -106,7 +106,7 @@ export function useCanvasInteraction({
       // Then check if clicking near a line
       const result: HitTestResult = hitTest(point, lineGeometries, snapThreshold);
       if (result.hit && result.lineId) {
-        onLineClick(result.lineId, result.position);
+        onLineClick(result.lineId, result.position, result.crossLineId);
       }
     },
     [getCanvasPoint, findHoveredMarker, lineGeometries, snapThreshold, onMarkerClick, onLineClick]
