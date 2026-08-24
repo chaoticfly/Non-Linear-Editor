@@ -12,6 +12,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -21,7 +22,7 @@ jobs:
           - os: macos-latest
             platform: darwin
             arch: universal
-            output: likhi-lakeerain.app
+            output: LikhiLakeerain.app
           # - os: ubuntu-latest
           #   platform: linux
           #   arch: amd64
@@ -87,7 +88,7 @@ jobs:
         if: matrix.platform == 'darwin'
         run: |
           cd bin
-          zip -r ../../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
+          zip -r ../likhi-lakeerain-${{ matrix.platform }}-${{ matrix.arch }}.zip ${{ matrix.output }}
 
       # - name: Create archive (Linux)
       #   if: matrix.platform == 'linux'
